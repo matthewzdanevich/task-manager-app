@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-// Модель задачи
-const Task = mongoose.model('Task', {
+// Схема задачи
+const taskSchema = new mongoose.Schema({
     description: {
         type: String,
         required: true,
@@ -10,8 +10,16 @@ const Task = mongoose.model('Task', {
     completed: {
         type: Boolean,
         default: false
+    },
+    owner: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'User'
     }
 });
+
+// Модель задачи
+const Task = mongoose.model('Task', taskSchema);
 
 // Экспорт модели
 module.exports = Task;

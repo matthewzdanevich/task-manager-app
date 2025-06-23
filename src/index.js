@@ -1,4 +1,14 @@
 const express = require('express');
+const dotenv = require('dotenv');
+
+// Конфигурация переменных окружения
+dotenv.config();
+if (!process.env.JWT_SECRET_KEY) {
+    console.error('Secret key is not set in environment variables.');
+    process.exit(1);
+}
+
+// Маршрутизаторы
 const userRouter = require('./routers/user.js');
 const taskRouter = require('./routers/task.js');
 
@@ -8,9 +18,8 @@ require('./db/connection.js');
 // Конфигурация сервера
 const app = express();
 const port = 3000;
-app.use(express.json());
 
-// Маршрутизация запросов
+app.use(express.json());
 app.use(userRouter);
 app.use(taskRouter);
 

@@ -1,35 +1,43 @@
 const express = require('express');
 const Task = require('../models/task.js');
+const authenticateUser = require('../middleware/authentication.js');
+
+// Маршрутизатор для задач
 const router = new express.Router();
 
-// Маршрутизация POST-запросов
-router.post('/tasks', async (req, res) => {
-    const task = new Task(req.body);
-
+// POST - создание задачи
+router.post('/tasks', authenticateUser, async (req, res) => {
     try {
-        const result = await task.save();
-        res.status(201).send(result);
+        const task = new Task({
+            ...req.body,
+            owner: req.user._id
+        });
+        const newTask = await task.save();
+        res.status(201).send(newTask);
     } catch (error) {
         res.status(400).send(error);
     }
 });
 
-// Маршрутизация GET-запросов
-router.get('/tasks', async (req, res) => {
+// GET - получить все задачи пользователя
+router.get('/tasks', authenticateUser, async (req, res) => {
     try {
-        const tasks = await Task.find({});
-        res.status(200).send(tasks);
+        await req.user.populate('tasks');
+        res.status(200).send(req.user.tasks);
     } catch (error) {
         res.status(500).send(error);
     }
 });
 
-router.get('/tasks/:id', async (req, res) => {
+// GET - получить конкретную задачу пользователя
+router.get('/tasks/:id', authenticateUser, async (req, res) => {
     try {
-        const task = await Task.findById(req.params.id);
+        const task = await Task.findOne({ _id: req.params.id, owner: req.user._id });
 
         if (!task) {
-            return res.status(404).send();
+            return res.status(404).send({
+                message: 'Task not found'
+            });
         }
 
         res.status(200).send(task);
@@ -38,39 +46,53 @@ router.get('/tasks/:id', async (req, res) => {
     }
 });
 
-// Маршрутизация PATCH-запросов
-router.patch('/tasks/:id', async (req, res) => {
-    const availableFields = ['description', 'completed'];
-    const updatedFields = Object.keys(req.body);
-    const isUpdatable = updatedFields.every((field) => availableFields.includes(field));
-
-    if (!isUpdatable) {
-        return res.status(400).send();
-    }
-
+// PATCH - изменение конкретной задачи пользователя
+router.patch('/tasks/:id', authenticateUser, async (req, res) => {
     try {
-        const task = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        const availableFields = ['description', 'completed'];
+        const updatedFields = Object.keys(req.body);
+        const isUpdatable = updatedFields.every((field) => availableFields.includes(field));
+
+        if (!isUpdatable) {
+            return res.status(400).send({
+                message: 'The following fields are not allowed to be updated'
+            });
+        }
         
+        const task = await Task.findOne({ _id: req.params.id, owner: req.user._id });
+
         if (!task) {
-            return res.status(404).send();
+            return res.status(404).send({
+                message: 'Task not found'
+            });
         }
 
-        res.status(200).send(task);
+        updatedFields.forEach((field) => {
+            task[field] = req.body[field];
+        });
+
+        const updatedTask = await task.save();
+
+        res.status(200).send(updatedTask);
     } catch (error) {
         res.status(400).send(error);
     }
 });
 
-// Маршрутизация DELETE-запросов
-router.delete('/tasks/:id', async (req, res) => {
+// DELETE - удаление конкретной задачи
+router.delete('/tasks/:id', authenticateUser, async (req, res) => {
     try {
-        const task = await Task.findByIdAndDelete(req.params.id);
+        const task = await Task.findOneAndDelete({ _id: req.params.id, owner: req.user._id });
 
         if (!task) {
-            return res.status(404).send();   
+            return res.status(404).send({
+                message: 'Task not found'
+            });
         }
 
-        res.status(200).send(task);
+        res.status(200).send({
+            message: `Task \"${task.description}\" has been deleted`
+        });
     } catch (error) {
         res.status(500).send();
     }
