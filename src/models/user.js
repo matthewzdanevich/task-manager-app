@@ -40,6 +40,8 @@ const userSchema = new mongoose.Schema({
             type: String
         }
     }]
+}, {
+    timestamps: true
 });
 
 // Виртуальное поле для заметок пользователя
