@@ -1,7 +1,23 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
+const sharp = require('sharp');
 const User = require('../models/user.js');
 const authenticateUser = require('../middleware/authentication.js');
+
+// Мидлвар для загрузки файлов
+const upload = multer({
+    limits: {
+        fileSize: 1 * 1024 * 1024
+    },
+    fileFilter(req, file, cb) {
+        if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+            cb(new Error('The file to be uploaded must be an image (jpg, jpeg, png).'));
+        }
+
+        cb(null, true);
+    }
+});
 
 // Маршрутизатор для пользователей
 const router = new express.Router();
@@ -81,10 +97,53 @@ router.post('/users/logoutAll', authenticateUser, async (req, res) => {
     }
 });
 
+// POST - загрузка иконки профиля
+router.post('/users/profile/icon', authenticateUser, upload.single('icon'), async (req, res) => {
+    try {
+        const buffer = await sharp(req.file.buffer).resize(380).jpeg().toBuffer();
+        req.user.icon = buffer;
+        await req.user.save();
+        res.status(200).send({
+            message: "The profile icon has been set"
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send();
+    }
+}, (error, req, res, next) => {
+    res.status(400).send({
+        message: error.message
+    });
+});
+
 // GET - переход в профиль пользователя
 router.get('/users/profile', authenticateUser, async (req, res) => {
     try {
         res.status(200).send(req.user);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+// GET - отображение иконки профиля указанного пользователя
+router.get('/users/:id/icon', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).send({
+                message: 'User not found'
+            });
+        }
+
+        if (!user.icon) {
+            return res.status(404).send({
+                message: 'The user does not have a profile icon'
+            });
+        }
+
+        res.set('Content-Type', 'image/jpeg');
+        res.send(user.icon);
     } catch (error) {
         res.status(500).send(error);
     }
@@ -125,6 +184,25 @@ router.delete('/users/profile', authenticateUser, async (req, res) => {
         res.status(500).send(error);
     }
 });
+
+// DELETE - удаление иконки профиля
+router.delete('/users/profile/icon', authenticateUser, async (req, res) => {
+    try {
+        if (!req.user.icon) {
+            return res.status(404).send({
+                message: 'To remove a profile icon, you must first set it up'
+            });
+        }
+
+        req.user.icon = undefined;
+        await req.user.save();
+        res.status(200).send({
+            message: 'The profile icon has been removed'
+        });
+    } catch (error) {
+        res.status(500).send();
+    }
+})
 
 // Экспорт маршрутизатора
 module.exports = router;
