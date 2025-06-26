@@ -4,6 +4,7 @@ const multer = require('multer');
 const sharp = require('sharp');
 const User = require('../models/user.js');
 const authenticateUser = require('../middleware/authentication.js');
+const { sendAccountCreationEmail, sendAccountDeletionEmail } = require('../emails/account.js');
 
 // Мидлвар для загрузки файлов
 const upload = multer({
@@ -28,6 +29,7 @@ router.post('/users', async (req, res) => {
         const user = new User(req.body);
         const newUser = await user.save();
         const token = await newUser.generateAuthenticationToken();
+        sendAccountCreationEmail(newUser.email, newUser.name);
         res.status(201).send({
             message: `A new user named ${newUser.name} has been created`,
             token
@@ -107,7 +109,6 @@ router.post('/users/profile/icon', authenticateUser, upload.single('icon'), asyn
             message: "The profile icon has been set"
         });
     } catch (error) {
-        console.log(error);
         res.status(500).send();
     }
 }, (error, req, res, next) => {
@@ -176,11 +177,11 @@ router.patch('/users/profile', authenticateUser, async (req, res) => {
 router.delete('/users/profile', authenticateUser, async (req, res) => {
     try {
         await req.user.deleteOne();
+        sendAccountDeletionEmail(req.user.email, req.user.name);
         res.status(200).send({
             message: `The user ${req.user.name} has been deleted`
         });
     } catch (error) {
-        console.log(error);
         res.status(500).send(error);
     }
 });

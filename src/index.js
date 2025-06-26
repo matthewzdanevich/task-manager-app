@@ -1,10 +1,17 @@
 const express = require('express');
-const dotenv = require('dotenv');
 
 // Конфигурация переменных окружения
-dotenv.config();
+require('dotenv').config();
+if (!process.env.MONGODB_URL) {
+    console.error('MongoDB URL is not set in environment variables.');
+    process.exit(1);
+}
 if (!process.env.JWT_SECRET_KEY) {
     console.error('Secret key is not set in environment variables.');
+    process.exit(1);
+}
+if (!process.env.APP_PASSWORD) {
+    console.error('App password is not set in environment variables.');
     process.exit(1);
 }
 
@@ -17,18 +24,24 @@ require('./db/connection.js');
 
 // Конфигурация сервера
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(userRouter);
 app.use(taskRouter);
 
+// Корневой маршрут
+app.get('/', (req, res) => {
+    res.status(200).send({
+        message: 'Task Manager API is running'
+    });
+});
+
 // Запуск сервера
 app.listen(port, (error) => {
     if (error) {
-        console.error(`Failed to start server on port ${port}: ${err.message}`);
+        console.error(`Failed to start server on port ${port}: ${error}`);
         process.exit(1);
     }
-
     console.log(`The server is running on port: ${port}`);
 });
