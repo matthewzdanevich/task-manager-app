@@ -26,21 +26,19 @@ require('./db/connection.js');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Корневой маршрут
+app.get('/', (req, res) => {
+    res.status(200).send({ message: 'Task Manager API is running' });
+});
+
 app.use(express.json());
 app.use(userRouter);
 app.use(taskRouter);
 
-// Корневой маршрут
-app.get('/', (req, res) => {
-    res.status(200).send({
-        message: 'Task Manager API is running'
-    });
-});
-
 // Запуск сервера
-app.listen(port, (error) => {
+app.listen(port, '0.0.0.0', (error) => {
     if (error) {
-        console.error(`Failed to start server on port ${port}: ${error}`);
+        console.error(`Failed to start server on port ${port}: ${error.message}`);
         process.exit(1);
     }
     console.log(`The server is running on port: ${port}`);
