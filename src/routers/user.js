@@ -29,9 +29,9 @@ router.post('/users', async (req, res) => {
         const user = new User(req.body);
         const newUser = await user.save();
         const token = await newUser.generateAuthenticationToken();
-        // sendAccountCreationEmail(newUser.email, newUser.name);
         res.status(201).send({
             message: `A new user named ${newUser.name} has been created`,
+            user,
             token
         });
     } catch (error) {
@@ -169,7 +169,7 @@ router.patch('/users/profile', authenticateUser, async (req, res) => {
 
         res.status(200).send(updatedUser);
     } catch (error) {
-        res.status(400).send(error);
+        res.status(500).send(error);
     }
 });
 
@@ -177,7 +177,6 @@ router.patch('/users/profile', authenticateUser, async (req, res) => {
 router.delete('/users/profile', authenticateUser, async (req, res) => {
     try {
         await req.user.deleteOne();
-        // sendAccountDeletionEmail(req.user.email, req.user.name);
         res.status(200).send({
             message: `The user ${req.user.name} has been deleted`
         });

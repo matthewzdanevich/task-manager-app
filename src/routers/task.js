@@ -19,7 +19,7 @@ router.post('/tasks', authenticateUser, async (req, res) => {
     }
 });
 
-// GET - получить все задачи пользователя
+// GET - получение всех задач пользователя
 router.get('/tasks', authenticateUser, async (req, res) => {
     try {
         const match = {};
@@ -52,7 +52,7 @@ router.get('/tasks', authenticateUser, async (req, res) => {
     }
 });
 
-// GET - получить конкретную задачу пользователя
+// GET - получение конкретной задачи пользователя
 router.get('/tasks/:id', authenticateUser, async (req, res) => {
     try {
         const task = await Task.findOne({ _id: req.params.id, owner: req.user._id });
